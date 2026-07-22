@@ -1,561 +1,981 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IoT Command Center · Cyber-Minimalist</title>
-  <!-- Fonte Inter (sans) + JetBrains Mono (mono) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <!-- Paho MQTT via CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Command Center · Dashboard Completo</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Paho MQTT -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 
-    body {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Inter', sans-serif;
-      background: radial-gradient(circle at 20% 30%, #0b1a2e, #0f0e1a 70%, #1a0f1f);
-      padding: 1.5rem;
-    }
+    <style>
+        /* ===== RESET E BASE ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    /* Mesh gradient escuro + toques violeta */
-    .mesh-bg {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      background: 
-        radial-gradient(ellipse at 10% 20%, #1b2b4a 0%, transparent 55%),
-        radial-gradient(ellipse at 90% 70%, #2a1f3a 0%, transparent 50%),
-        radial-gradient(ellipse at 50% 100%, #0f1a2b, transparent 60%),
-        #0b101a;
-    }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at 20% 30%, #0b1a2e, #0f0e1a 70%, #1a0f1f);
+            padding: 1.5rem;
+            position: relative;
+        }
 
-    .dashboard-card {
-      position: relative;
-      z-index: 10;
-      max-width: 720px;
-      width: 100%;
-      background: rgba(0, 0, 0, 0.35);
-      backdrop-filter: blur(18px) saturate(1.2);
-      -webkit-backdrop-filter: blur(18px) saturate(1.2);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 36px;
-      padding: 2.2rem 2.2rem 2.8rem;
-      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.03);
-      transition: all 0.2s ease;
-    }
+        /* ===== MESH GRADIENT ===== */
+        .mesh-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background:
+                radial-gradient(ellipse at 10% 20%, #1b2b4a 0%, transparent 55%),
+                radial-gradient(ellipse at 90% 70%, #2a1f3a 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 100%, #0f1a2b, transparent 60%),
+                #0b101a;
+        }
 
-    /* cabeçalho */
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      flex-wrap: wrap;
-      margin-bottom: 2rem;
-      gap: 0.8rem;
-    }
+        /* ===== DASHBOARD CARD ===== */
+        .dashboard-card {
+            position: relative;
+            z-index: 10;
+            max-width: 820px;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(18px) saturate(1.2);
+            -webkit-backdrop-filter: blur(18px) saturate(1.2);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 36px;
+            padding: 2.2rem 2.5rem 2.8rem;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+            transition: all 0.3s ease;
+        }
 
-    .title-group h1 {
-      font-weight: 500;
-      font-size: 1.8rem;
-      letter-spacing: -0.5px;
-      color: #f0f4ff;
-      text-shadow: 0 0 12px rgba(0, 180, 255, 0.15);
-      line-height: 1.2;
-    }
+        /* ===== HEADER ===== */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            gap: 0.8rem;
+        }
 
-    .subtitle {
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 400;
-      font-size: 0.78rem;
-      letter-spacing: 0.3px;
-      color: #a0b8d9;
-      background: rgba(255, 255, 255, 0.02);
-      padding: 0.2rem 0.8rem 0.2rem 0.5rem;
-      border-radius: 30px;
-      display: inline-block;
-      border: 1px solid rgba(255, 255, 255, 0.03);
-      margin-top: 0.15rem;
-    }
+        .title-group h1 {
+            font-weight: 600;
+            font-size: 1.8rem;
+            color: #f0f4ff;
+            text-shadow: 0 0 12px rgba(0, 180, 255, 0.15);
+            letter-spacing: -0.5px;
+        }
 
-    .badge-status {
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 500;
-      font-size: 0.7rem;
-      padding: 0.4rem 1.1rem;
-      border-radius: 40px;
-      background: rgba(0, 0, 0, 0.5);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(4px);
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      letter-spacing: 0.2px;
-      text-transform: uppercase;
-      transition: all 0.25s;
-      white-space: nowrap;
-    }
+        .title-group .subtitle {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 400;
+            font-size: 0.7rem;
+            color: #a0b8d9;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 0.2rem 0.8rem;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            display: inline-block;
+            margin-top: 0.15rem;
+        }
 
-    .badge-connecting { color: #fbbf24; border-color: rgba(251, 191, 36, 0.2); box-shadow: 0 0 10px rgba(251, 191, 36, 0.1); }
-    .badge-online { color: #34d399; border-color: rgba(52, 211, 153, 0.2); box-shadow: 0 0 14px rgba(52, 211, 153, 0.12); }
-    .badge-offline { color: #f87171; border-color: rgba(248, 113, 113, 0.2); box-shadow: 0 0 10px rgba(248, 113, 113, 0.08); }
+        /* ===== BADGES ===== */
+        .status-badges {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
 
-    .badge-status .led-dot {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: currentColor;
-      box-shadow: 0 0 8px currentColor;
-    }
+        .badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+            font-size: 0.55rem;
+            padding: 0.3rem 1rem;
+            border-radius: 40px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(4px);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            letter-spacing: 0.2px;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            cursor: default;
+        }
 
-    .badge-connecting .led-dot { animation: pulse-amber 1.2s infinite; }
-    @keyframes pulse-amber {
-      0% { opacity: 0.4; transform: scale(0.9); }
-      50% { opacity: 1; transform: scale(1.2); }
-      100% { opacity: 0.4; transform: scale(0.9); }
-    }
+        .badge .dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            transition: all 0.3s ease;
+        }
 
-    /* input tópico */
-    .topic-area {
-      margin: 1.8rem 0 2rem;
-    }
+        .badge-online {
+            color: #34d399;
+            border-color: rgba(52, 211, 153, 0.2);
+        }
+        .badge-offline {
+            color: #f87171;
+            border-color: rgba(248, 113, 113, 0.2);
+        }
+        .badge-connecting {
+            color: #fbbf24;
+            border-color: rgba(251, 191, 36, 0.2);
+        }
+        .badge-connecting .dot {
+            animation: pulse 1.2s infinite;
+        }
 
-    .topic-label {
-      display: block;
-      font-size: 0.65rem;
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
-      color: #8ea4c9;
-      margin-bottom: 0.4rem;
-      font-weight: 500;
-    }
+        @keyframes pulse {
+            0% {
+                opacity: 0.4;
+                transform: scale(0.9);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+            100% {
+                opacity: 0.4;
+                transform: scale(0.9);
+            }
+        }
 
-    .topic-input {
-      width: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 18px;
-      padding: 0.8rem 1.2rem;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.85rem;
-      color: #d6e4ff;
-      outline: none;
-      transition: all 0.25s;
-      box-shadow: inset 0 4px 8px rgba(0,0,0,0.5);
-    }
+        /* ===== TOPICO ===== */
+        .topic-area {
+            margin: 1.5rem 0 1.8rem;
+        }
 
-    .topic-input:focus {
-      border-color: rgba(0, 200, 255, 0.5);
-      box-shadow: 0 0 20px rgba(0, 180, 255, 0.15), inset 0 4px 8px rgba(0,0,0,0.6);
-      background: rgba(0, 10, 30, 0.6);
-    }
+        .topic-label {
+            display: block;
+            font-size: 0.6rem;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            color: #8ea4c9;
+            margin-bottom: 0.3rem;
+            font-weight: 600;
+        }
 
-    .topic-input:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
+        .topic-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 18px;
+            padding: 0.7rem 1.2rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: #d6e4ff;
+            outline: none;
+            transition: all 0.25s ease;
+        }
 
-    /* simulador LED 3D */
-    .led-simulator {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin: 2rem 0 2.2rem;
-    }
+        .topic-input:focus {
+            border-color: rgba(0, 200, 255, 0.4);
+            box-shadow: 0 0 20px rgba(0, 180, 255, 0.1);
+        }
 
-    .led-ring {
-      width: 140px;
-      height: 140px;
-      border-radius: 50%;
-      background: #1e2636;
-      box-shadow: inset 0 10px 20px rgba(0,0,0,0.7), 0 0 0 2px rgba(255,255,255,0.02);
-      transition: all 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      will-change: box-shadow, background;
-    }
+        .topic-input:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
 
-    .led-ring.active {
-      background: #00c8ff;
-      box-shadow: 
-        0 0 30px #00a6ff,
-        0 0 60px #0077ff,
-        0 0 100px #0044ff,
-        inset 0 0 20px rgba(255,255,255,0.3);
-    }
+        /* ===== LED SIMULATOR ===== */
+        .led-simulator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 1.5rem 0 2rem;
+        }
 
-    .led-ring-inner {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      background: rgba(0,0,0,0.35);
-      backdrop-filter: blur(3px);
-      border: 1px solid rgba(255,255,255,0.05);
-    }
+        .led-ring {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: #1e2636;
+            box-shadow: inset 0 10px 20px rgba(0, 0, 0, 0.7);
+            transition: all 0.4s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(255, 255, 255, 0.03);
+            position: relative;
+        }
 
-    .led-status-text {
-      font-family: 'JetBrains Mono', monospace;
-      margin-top: 1rem;
-      font-size: 0.75rem;
-      letter-spacing: 0.8px;
-      color: #8ea4c9;
-      background: rgba(0,0,0,0.3);
-      padding: 0.2rem 1.4rem;
-      border-radius: 40px;
-      border: 1px solid rgba(255,255,255,0.02);
-      transition: color 0.3s;
-    }
+        .led-ring.active {
+            background: #00c8ff;
+            box-shadow:
+                0 0 30px #00a6ff,
+                0 0 60px #0077ff,
+                0 0 100px #0044ff,
+                inset 0 0 20px rgba(255, 255, 255, 0.3);
+        }
 
-    .led-status-text.active-text {
-      color: #00d4ff;
-      text-shadow: 0 0 20px rgba(0, 180, 255, 0.3);
-    }
+        .led-ring-inner {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(3px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
 
-    /* ação botões */
-    .action-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-      margin-top: 0.5rem;
-    }
+        .led-status-text {
+            font-family: 'JetBrains Mono', monospace;
+            margin-top: 0.8rem;
+            font-size: 0.7rem;
+            letter-spacing: 0.8px;
+            color: #8ea4c9;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.2rem 1.4rem;
+            border-radius: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+            transition: color 0.3s ease;
+        }
 
-    .btn-iot {
-      font-family: 'Inter', sans-serif;
-      font-weight: 600;
-      font-size: 0.9rem;
-      padding: 0.9rem 0.5rem;
-      border-radius: 40px;
-      background: rgba(0, 0, 0, 0.2);
-      backdrop-filter: blur(4px);
-      border: 1px solid rgba(255, 255, 255, 0.04);
-      color: #c8daf5;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      letter-spacing: 0.3px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      text-transform: uppercase;
-      font-size: 0.8rem;
-    }
+        .led-status-text.active-text {
+            color: #00d4ff;
+            text-shadow: 0 0 20px rgba(0, 180, 255, 0.3);
+        }
 
-    .btn-iot:active {
-      transform: scale(0.96);
-    }
+        /* ===== BOTOES ===== */
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
 
-    .btn-iot:disabled {
-      opacity: 0.4;
-      pointer-events: none;
-      filter: grayscale(0.5);
-    }
+        .btn-iot {
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.8rem;
+            padding: 0.9rem 0.5rem;
+            border-radius: 40px;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            color: #c8daf5;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            user-select: none;
+        }
 
-    .btn-on {
-      border-color: rgba(0, 200, 255, 0.25);
-      color: #b0e4ff;
-    }
-    .btn-on:hover:not(:disabled) {
-      background: rgba(0, 200, 255, 0.08);
-      border-color: rgba(0, 200, 255, 0.4);
-      box-shadow: 0 0 20px rgba(0, 180, 255, 0.1);
-    }
+        .btn-iot:active {
+            transform: scale(0.95);
+        }
 
-    .btn-off {
-      border-color: rgba(255, 80, 120, 0.2);
-      color: #ffb0c5;
-    }
-    .btn-off:hover:not(:disabled) {
-      background: rgba(255, 80, 120, 0.08);
-      border-color: rgba(255, 80, 120, 0.35);
-      box-shadow: 0 0 20px rgba(255, 80, 120, 0.08);
-    }
+        .btn-iot:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
 
-    .footer-mqtt {
-      margin-top: 1.8rem;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.6rem;
-      color: #5e7399;
-      text-align: center;
-      border-top: 1px solid rgba(255,255,255,0.02);
-      padding-top: 1.5rem;
-      letter-spacing: 0.3px;
-      display: flex;
-      justify-content: center;
-      gap: 1.2rem;
-      flex-wrap: wrap;
-    }
+        .btn-on {
+            border-color: rgba(0, 200, 255, 0.2);
+            color: #b0e4ff;
+        }
 
-    .footer-mqtt span {
-      background: rgba(0,0,0,0.2);
-      padding: 0.2rem 0.8rem;
-      border-radius: 40px;
-    }
+        .btn-on:hover:not(:disabled) {
+            background: rgba(0, 200, 255, 0.08);
+            border-color: rgba(0, 200, 255, 0.4);
+            box-shadow: 0 0 20px rgba(0, 180, 255, 0.05);
+        }
 
-    /* bloqueio */
-    .blocked {
-      opacity: 0.6;
-      pointer-events: none;
-      filter: grayscale(0.2);
-    }
+        .btn-off {
+            border-color: rgba(255, 80, 120, 0.15);
+            color: #ffb0c5;
+        }
 
-    /* responsivo */
-    @media (max-width: 520px) {
-      .dashboard-card { padding: 1.8rem 1.2rem; }
-      .title-group h1 { font-size: 1.5rem; }
-      .led-ring { width: 110px; height: 110px; }
-      .led-ring-inner { width: 44px; height: 44px; }
-      .action-grid { gap: 0.6rem; }
-      .btn-iot { font-size: 0.7rem; padding: 0.7rem 0.2rem; }
-    }
-  </style>
+        .btn-off:hover:not(:disabled) {
+            background: rgba(255, 80, 120, 0.08);
+            border-color: rgba(255, 80, 120, 0.3);
+        }
+
+        /* ===== SERIAL CONTROLS ===== */
+        .serial-controls {
+            display: flex;
+            gap: 0.8rem;
+            margin-top: 1.5rem;
+            padding-top: 1.2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.03);
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-serial {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            padding: 0.4rem 1.2rem;
+            border-radius: 40px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: #8ea4c9;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-serial:hover:not(:disabled) {
+            background: rgba(0, 200, 255, 0.05);
+            border-color: rgba(0, 200, 255, 0.2);
+            color: #b0e4ff;
+        }
+
+        .btn-serial:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .btn-serial.active {
+            border-color: rgba(52, 211, 153, 0.2);
+            color: #34d399;
+        }
+
+        .serial-status-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.55rem;
+            color: #5e7399;
+            padding: 0.3rem 0.8rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 40px;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            margin-top: 1.8rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.5rem;
+            color: #5e7399;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.02);
+            padding-top: 1.2rem;
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .footer span {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 0.2rem 0.8rem;
+            border-radius: 40px;
+        }
+
+        /* ===== TOAST ===== */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 0.8rem 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: #d6e4ff;
+            font-size: 0.7rem;
+            font-family: 'JetBrains Mono', monospace;
+            z-index: 100;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s ease;
+            max-width: 90%;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            border-color: rgba(52, 211, 153, 0.3);
+        }
+
+        .toast.error {
+            border-color: rgba(248, 113, 113, 0.3);
+        }
+
+        .toast.info {
+            border-color: rgba(251, 191, 36, 0.3);
+        }
+
+        /* ===== RESPONSIVO ===== */
+        @media (max-width: 600px) {
+            .dashboard-card {
+                padding: 1.5rem 1.2rem;
+            }
+            .title-group h1 {
+                font-size: 1.3rem;
+            }
+            .led-ring {
+                width: 100px;
+                height: 100px;
+            }
+            .led-ring-inner {
+                width: 40px;
+                height: 40px;
+            }
+            .action-grid {
+                gap: 0.6rem;
+            }
+            .btn-iot {
+                font-size: 0.65rem;
+                padding: 0.7rem 0.2rem;
+            }
+            .serial-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .status-badges {
+                width: 100%;
+                justify-content: flex-start;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .header {
+                flex-direction: column;
+            }
+            .title-group h1 {
+                font-size: 1.1rem;
+            }
+            .badge {
+                font-size: 0.5rem;
+                padding: 0.2rem 0.7rem;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="mesh-bg"></div>
 
-  <div class="dashboard-card" id="dashboardCard">
-    <!-- cabeçalho -->
-    <div class="header">
-      <div class="title-group">
-        <h1>⍟ IoT Command Center</h1>
-        <div class="subtitle">TARGET: ARDUINO PORT 13</div>
-      </div>
-      <div class="badge-status badge-connecting" id="statusBadge">
-        <span class="led-dot"></span> <span id="statusText">Sincronizando</span>
-      </div>
+    <div class="mesh-bg"></div>
+
+    <!-- ===== DASHBOARD ===== -->
+    <div class="dashboard-card" id="dashboardCard">
+
+        <!-- HEADER -->
+        <div class="header">
+            <div class="title-group">
+                <h1>⍟ IoT Command Center</h1>
+                <div class="subtitle">TARGET: ARDUINO PORT 13</div>
+            </div>
+            <div class="status-badges">
+                <div class="badge badge-connecting" id="mqttBadge">
+                    <span class="dot"></span>
+                    <span id="mqttStatus">MQTT</span>
+                </div>
+                <div class="badge badge-connecting" id="serialBadge">
+                    <span class="dot"></span>
+                    <span id="serialStatus">Serial</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOPICO MQTT -->
+        <div class="topic-area">
+            <label class="topic-label" for="topicInput">📡 Tópico MQTT</label>
+            <input type="text" id="topicInput" class="topic-input"
+                   value="curso_iot/aluno/arduino_led"
+                   spellcheck="false">
+        </div>
+
+        <!-- LED SIMULATOR -->
+        <div class="led-simulator">
+            <div class="led-ring" id="ledRing">
+                <div class="led-ring-inner"></div>
+            </div>
+            <div class="led-status-text" id="ledStatusText">STATUS: STANDBY</div>
+        </div>
+
+        <!-- BOTOES DE AÇÃO -->
+        <div class="action-grid">
+            <button class="btn-iot btn-on" id="btnOn" disabled>◉ LIGAR</button>
+            <button class="btn-iot btn-off" id="btnOff" disabled>◉ DESLIGAR</button>
+        </div>
+
+        <!-- CONTROLES SERIAL -->
+        <div class="serial-controls">
+            <button class="btn-serial" id="btnSerialConnect">🔌 Conectar Serial</button>
+            <button class="btn-serial" id="btnSerialDisconnect" disabled>⛔ Desconectar</button>
+            <span class="serial-status-text" id="serialStatusText">Serial: desconectado</span>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+            <span id="clientInfo">client: —</span>
+            <span id="brokerInfo">broker.hivemq.com:8884</span>
+            <span id="lastCommand">último comando: —</span>
+        </div>
     </div>
 
-    <!-- tópico -->
-    <div class="topic-area">
-      <label class="topic-label" for="topicInput">📡 Tópico MQTT</label>
-      <input type="text" id="topicInput" class="topic-input" value="curso_iot/aluno/arduino_led" spellcheck="false">
-    </div>
+    <!-- ===== TOAST ===== -->
+    <div class="toast" id="toast"></div>
 
-    <!-- anel LED -->
-    <div class="led-simulator" id="ledSimulator">
-      <div class="led-ring" id="ledRing">
-        <div class="led-ring-inner"></div>
-      </div>
-      <div class="led-status-text" id="ledStatusText">STATUS: STANDBY</div>
-    </div>
+    <!-- ===== SCRIPT ===== -->
+    <script>
+        (function() {
+            'use strict';
 
-    <!-- botões -->
-    <div class="action-grid">
-      <button class="btn-iot btn-on" id="btnOn" disabled>◉ LIGAR</button>
-      <button class="btn-iot btn-off" id="btnOff" disabled>◉ DESLIGAR</button>
-    </div>
+            // ============================================================
+            //  ELEMENTOS DOM
+            // ============================================================
+            const mqttBadge = document.getElementById('mqttBadge');
+            const mqttStatus = document.getElementById('mqttStatus');
+            const serialBadge = document.getElementById('serialBadge');
+            const serialStatus = document.getElementById('serialStatus');
 
-    <div class="footer-mqtt">
-      <span id="clientIdDisplay">client: ···</span>
-      <span id="brokerInfo">broker.hivemq.com:8884</span>
-    </div>
-  </div>
+            const topicInput = document.getElementById('topicInput');
+            const ledRing = document.getElementById('ledRing');
+            const ledStatusText = document.getElementById('ledStatusText');
+            const btnOn = document.getElementById('btnOn');
+            const btnOff = document.getElementById('btnOff');
+            const btnSerialConnect = document.getElementById('btnSerialConnect');
+            const btnSerialDisconnect = document.getElementById('btnSerialDisconnect');
+            const serialStatusText = document.getElementById('serialStatusText');
+            const clientInfo = document.getElementById('clientInfo');
+            const lastCommand = document.getElementById('lastCommand');
+            const toast = document.getElementById('toast');
 
-  <script>
-    (function(){
-      "use strict";
+            // ============================================================
+            //  ESTADO GLOBAL
+            // ============================================================
+            let mqttClient = null;
+            let isMqttConnected = false;
+            let currentTopic = topicInput.value.trim();
+            let ledState = 0; // 0=off, 1=on
+            let serialPort = null;
+            let serialReader = null;
+            let serialWriter = null;
+            let isSerialConnected = false;
+            let serialBuffer = '';
+            let toastTimeout = null;
 
-      // elementos DOM
-      const statusBadge = document.getElementById('statusBadge');
-      const statusText = document.getElementById('statusText');
-      const topicInput = document.getElementById('topicInput');
-      const ledRing = document.getElementById('ledRing');
-      const ledStatusText = document.getElementById('ledStatusText');
-      const btnOn = document.getElementById('btnOn');
-      const btnOff = document.getElementById('btnOff');
-      const clientIdSpan = document.getElementById('clientIdDisplay');
-
-      // estado interno (NUNCA usado para definir LED, apenas para controle)
-      let currentLedState = 0;        // 0=off, 1=on (reflete o que veio via MQTT)
-      let isOnline = false;
-      let mqttClient = null;
-      let currentTopic = topicInput.value.trim();
-
-      // helpers
-      function setStatus(mode, text) {
-        statusBadge.className = 'badge-status';
-        if (mode === 'connecting') {
-          statusBadge.classList.add('badge-connecting');
-          statusText.textContent = text || 'Sincronizando';
-        } else if (mode === 'online') {
-          statusBadge.classList.add('badge-online');
-          statusText.textContent = text || 'Sistema Online';
-        } else {
-          statusBadge.classList.add('badge-offline');
-          statusText.textContent = text || 'Offline';
-        }
-        isOnline = (mode === 'online');
-        // habilita/desabilita controles
-        const controls = [topicInput, btnOn, btnOff];
-        controls.forEach(el => el.disabled = !isOnline);
-        if (!isOnline) {
-          btnOn.disabled = true;
-          btnOff.disabled = true;
-        } else {
-          // se online, reaplica estado do LED (mas não muda visual)
-          // os botões ficam habilitados
-        }
-      }
-
-      // atualiza LED com base no estado (chamado APENAS no callback)
-      function updateLedVisual(state) {
-        if (state === 1) {
-          ledRing.classList.add('active');
-          ledStatusText.textContent = 'STATUS: ACTIVE';
-          ledStatusText.classList.add('active-text');
-        } else {
-          ledRing.classList.remove('active');
-          ledStatusText.textContent = 'STATUS: STANDBY';
-          ledStatusText.classList.remove('active-text');
-        }
-        currentLedState = state;
-      }
-
-      // Publica mensagem (sem alterar visual)
-      function publishMessage(payload) {
-        if (!mqttClient || !isOnline) {
-          console.warn('MQTT não conectado');
-          return;
-        }
-        const topic = topicInput.value.trim();
-        if (!topic) return;
-        const message = new Paho.Message(payload);
-        message.destinationName = topic;
-        mqttClient.send(message);
-        console.log(`[MQTT] publish → ${topic} : ${payload}`);
-      }
-
-      // subscribe / unsubscribe
-      function subscribeToTopic(topic) {
-        if (!mqttClient || !isOnline) return;
-        mqttClient.unsubscribe(currentTopic, { onSuccess: function() {
-          console.log(`unsubscribed from ${currentTopic}`);
-          mqttClient.subscribe(topic, { onSuccess: function() {
-            console.log(`subscribed to ${topic}`);
-            currentTopic = topic;
-          }, onFailure: function(err) {
-            console.warn('subscribe error', err);
-          }});
-        }, onFailure: function(err) {
-          console.warn('unsubscribe error', err);
-        }});
-      }
-
-      // Inicializa MQTT
-      function initMqtt() {
-        const clientId = 'iot_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now().toString(36);
-        clientIdSpan.textContent = `client: ${clientId}`;
-        const client = new Paho.MQTT.Client('broker.hivemq.com', 8884, clientId);
-        mqttClient = client;
-
-        client.onConnectionLost = function(response) {
-          console.warn('Connection lost', response);
-          setStatus('offline', 'Desconectado');
-          // tenta reconectar após 3s
-          setTimeout(() => {
-            if (mqttClient && !mqttClient.isConnected()) {
-              initMqtt();
+            // ============================================================
+            //  TOAST
+            // ============================================================
+            function showToast(message, type = 'info') {
+                toast.textContent = message;
+                toast.className = `toast show ${type}`;
+                clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 3000);
             }
-          }, 4000);
-        };
 
-        client.onMessageArrived = function(message) {
-          const payload = message.payloadString.trim();
-          console.log(`[MQTT] received → ${message.destinationName} : ${payload}`);
-          // única regra: modifica o LED baseado no payload
-          if (payload === '1') {
-            updateLedVisual(1);
-          } else if (payload === '0') {
+            // ============================================================
+            //  BADGES
+            // ============================================================
+            function updateMqttBadge(status, text) {
+                mqttBadge.className = 'badge';
+                if (status === 'online') {
+                    mqttBadge.classList.add('badge-online');
+                } else if (status === 'connecting') {
+                    mqttBadge.classList.add('badge-connecting');
+                } else {
+                    mqttBadge.classList.add('badge-offline');
+                }
+                mqttStatus.textContent = text || 'MQTT';
+            }
+
+            function updateSerialBadge(status, text) {
+                serialBadge.className = 'badge';
+                if (status === 'online') {
+                    serialBadge.classList.add('badge-online');
+                } else if (status === 'connecting') {
+                    serialBadge.classList.add('badge-connecting');
+                } else {
+                    serialBadge.classList.add('badge-offline');
+                }
+                serialStatus.textContent = text || 'Serial';
+            }
+
+            // ============================================================
+            //  LED VISUAL
+            // ============================================================
+            function updateLedVisual(state) {
+                ledState = state;
+                if (state === 1) {
+                    ledRing.classList.add('active');
+                    ledStatusText.textContent = 'STATUS: ACTIVE';
+                    ledStatusText.classList.add('active-text');
+                } else {
+                    ledRing.classList.remove('active');
+                    ledStatusText.textContent = 'STATUS: STANDBY';
+                    ledStatusText.classList.remove('active-text');
+                }
+            }
+
+            // ============================================================
+            //  HABILITA/DESABILITA BOTOES
+            // ============================================================
+            function setControlsEnabled(enabled) {
+                btnOn.disabled = !enabled;
+                btnOff.disabled = !enabled;
+                if (!enabled) {
+                    btnOn.style.opacity = '0.5';
+                    btnOff.style.opacity = '0.5';
+                } else {
+                    btnOn.style.opacity = '1';
+                    btnOff.style.opacity = '1';
+                }
+            }
+
+            // ============================================================
+            //  PUBLICAR MENSAGEM MQTT
+            // ============================================================
+            function publishMqtt(payload) {
+                if (!mqttClient || !isMqttConnected) {
+                    showToast('❌ MQTT desconectado', 'error');
+                    return;
+                }
+                const topic = topicInput.value.trim();
+                if (!topic) {
+                    showToast('❌ Tópico vazio', 'error');
+                    return;
+                }
+                const message = new Paho.Message(payload);
+                message.destinationName = topic;
+                mqttClient.send(message);
+                lastCommand.textContent = `último comando: ${payload === '1' ? 'LIGAR' : 'DESLIGAR'}`;
+                showToast(`📤 Enviado: ${payload === '1' ? 'LIGAR' : 'DESLIGAR'}`, 'success');
+                console.log(`[MQTT] Publicado: ${topic} -> ${payload}`);
+            }
+
+            // ============================================================
+            //  ENVIAR PARA SERIAL
+            // ============================================================
+            async function sendSerial(data) {
+                if (!isSerialConnected || !serialWriter) {
+                    showToast('❌ Serial não conectado', 'error');
+                    return false;
+                }
+                try {
+                    const encoder = new TextEncoder();
+                    await serialWriter.write(encoder.encode(data + '\n'));
+                    console.log(`[Serial] Enviado: ${data}`);
+                    return true;
+                } catch (error) {
+                    console.error('Erro ao enviar serial:', error);
+                    showToast('❌ Erro ao enviar para serial', 'error');
+                    return false;
+                }
+            }
+
+            // ============================================================
+            //  INICIAR MQTT
+            // ============================================================
+            function initMqtt() {
+                const clientId = 'iot_dash_' + Math.random().toString(36).substring(2, 10) +
+                    '_' + Date.now().toString(36);
+                clientInfo.textContent = `client: ${clientId}`;
+
+                const client = new Paho.MQTT.Client('broker.hivemq.com', 8884, clientId);
+                mqttClient = client;
+
+                client.onConnectionLost = function(response) {
+                    console.warn('MQTT desconectado', response);
+                    isMqttConnected = false;
+                    updateMqttBadge('offline', 'MQTT: off');
+                    setControlsEnabled(false);
+                    showToast('🔴 MQTT desconectado', 'error');
+                    // Tenta reconectar após 5s
+                    setTimeout(() => {
+                        if (!isMqttConnected) {
+                            initMqtt();
+                        }
+                    }, 5000);
+                };
+
+                client.onMessageArrived = function(message) {
+                    const payload = message.payloadString.trim();
+                    console.log(`[MQTT] Recebido: ${message.destinationName} -> ${payload}`);
+
+                    if (payload === '1') {
+                        updateLedVisual(1);
+                        showToast('💡 LED LIGADO via MQTT', 'success');
+                    } else if (payload === '0') {
+                        updateLedVisual(0);
+                        showToast('💡 LED DESLIGADO via MQTT', 'success');
+                    }
+                };
+
+                const connectOptions = {
+                    useSSL: true,
+                    onSuccess: function() {
+                        console.log('MQTT conectado');
+                        isMqttConnected = true;
+                        updateMqttBadge('online', 'MQTT: online');
+                        setControlsEnabled(true);
+
+                        // Inscreve no tópico
+                        const topic = topicInput.value.trim();
+                        if (topic) {
+                            client.subscribe(topic, {
+                                onSuccess: function() {
+                                    currentTopic = topic;
+                                    console.log(`Inscrito em: ${topic}`);
+                                    showToast('✅ MQTT conectado e inscrito', 'success');
+                                },
+                                onFailure: function(err) {
+                                    console.warn('Erro ao inscrever:', err);
+                                }
+                            });
+                        }
+                    },
+                    onFailure: function(err) {
+                        console.error('Falha MQTT:', err);
+                        isMqttConnected = false;
+                        updateMqttBadge('offline', 'MQTT: erro');
+                        setControlsEnabled(false);
+                        showToast('❌ Falha ao conectar MQTT', 'error');
+                        // Tenta reconectar após 5s
+                        setTimeout(() => {
+                            if (!isMqttConnected) {
+                                initMqtt();
+                            }
+                        }, 5000);
+                    },
+                    timeout: 15,
+                };
+
+                client.connect(connectOptions);
+                updateMqttBadge('connecting', 'MQTT: conec.');
+            }
+
+            // ============================================================
+            //  RECONECTAR MQTT AO MUDAR TOPICO
+            // ============================================================
+            let topicChanged = false;
+            topicInput.addEventListener('input', function() {
+                topicChanged = true;
+            });
+
+            topicInput.addEventListener('blur', function() {
+                if (topicChanged && isMqttConnected && mqttClient) {
+                    const newTopic = topicInput.value.trim();
+                    if (newTopic && newTopic !== currentTopic) {
+                        // Desinscreve do antigo e inscreve no novo
+                        mqttClient.unsubscribe(currentTopic, {
+                            onSuccess: function() {
+                                console.log(`Desinscrito de: ${currentTopic}`);
+                                mqttClient.subscribe(newTopic, {
+                                    onSuccess: function() {
+                                        currentTopic = newTopic;
+                                        console.log(`Inscrito em: ${newTopic}`);
+                                        showToast(`📡 Tópico alterado: ${newTopic}`, 'info');
+                                    },
+                                    onFailure: function(err) {
+                                        console.warn('Erro ao inscrever:', err);
+                                    }
+                                });
+                            },
+                            onFailure: function(err) {
+                                console.warn('Erro ao desinscrever:', err);
+                            }
+                        });
+                    }
+                    topicChanged = false;
+                }
+            });
+
+            // ============================================================
+            //  BOTOES - ENVIAM APENAS MQTT
+            // ============================================================
+            btnOn.addEventListener('click', function() {
+                publishMqtt('1');
+                // Também envia via serial se estiver conectado
+                if (isSerialConnected) {
+                    sendSerial('1');
+                }
+            });
+
+            btnOff.addEventListener('click', function() {
+                publishMqtt('0');
+                if (isSerialConnected) {
+                    sendSerial('0');
+                }
+            });
+
+            // ============================================================
+            //  SERIAL - CONECTAR/DESCONECTAR
+            // ============================================================
+            async function connectSerial() {
+                if (!('serial' in navigator)) {
+                    showToast('❌ Web Serial API não suportada neste navegador', 'error');
+                    return;
+                }
+
+                try {
+                    const port = await navigator.serial.requestPort();
+                    await port.open({ baudRate: 9600 });
+                    serialPort = port;
+                    isSerialConnected = true;
+
+                    // Configura leitura
+                    const reader = port.readable.getReader();
+                    serialReader = reader;
+                    const writer = port.writable.getWriter();
+                    serialWriter = writer;
+
+                    updateSerialBadge('online', 'Serial: online');
+                    serialStatusText.textContent = 'Serial: conectado';
+                    btnSerialConnect.disabled = true;
+                    btnSerialDisconnect.disabled = false;
+                    showToast('✅ Serial conectado', 'success');
+
+                    // Loop de leitura
+                    readSerialLoop(reader);
+
+                    // Solicita status atual do LED
+                    setTimeout(() => {
+                        sendSerial('STATUS');
+                    }, 500);
+
+                } catch (error) {
+                    console.error('Erro ao conectar serial:', error);
+                    showToast('❌ Erro ao conectar serial: ' + error.message, 'error');
+                }
+            }
+
+            async function readSerialLoop(reader) {
+                try {
+                    while (true) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+
+                        const decoder = new TextDecoder();
+                        const text = decoder.decode(value);
+                        serialBuffer += text;
+
+                        // Processa linhas completas
+                        let lines = serialBuffer.split('\n');
+                        serialBuffer = lines.pop() || '';
+
+                        for (const line of lines) {
+                            const data = line.trim();
+                            if (data === '') continue;
+                            console.log(`[Serial] Recebido: ${data}`);
+
+                            // Se receber 1 ou 0, atualiza LED e publica MQTT
+                            if (data === '1' || data === '0') {
+                                const state = parseInt(data);
+                                updateLedVisual(state);
+                                // Publica no MQTT para sincronizar
+                                if (isMqttConnected && mqttClient) {
+                                    const topic = topicInput.value.trim();
+                                    if (topic) {
+                                        const msg = new Paho.Message(data);
+                                        msg.destinationName = topic;
+                                        mqttClient.send(msg);
+                                        console.log(`[MQTT] Publicado via serial: ${data}`);
+                                    }
+                                }
+                                showToast(`📥 Estado do LED: ${state === 1 ? 'LIGADO' : 'DESLIGADO'}`, 'success');
+                            } else if (data.includes('LED LIGADO')) {
+                                updateLedVisual(1);
+                                showToast('💡 LED LIGADO (Serial)', 'success');
+                            } else if (data.includes('LED DESLIGADO')) {
+                                updateLedVisual(0);
+                                showToast('💡 LED DESLIGADO (Serial)', 'success');
+                            } else {
+                                // Mostra outras mensagens do Arduino
+                                if (data.length > 0) {
+                                    console.log('[Arduino]', data);
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    if (error.name !== 'AbortError') {
+                        console.error('Erro na leitura serial:', error);
+                        showToast('❌ Erro na leitura serial', 'error');
+                    }
+                } finally {
+                    // Se saiu do loop, desconecta
+                    if (isSerialConnected) {
+                        disconnectSerial();
+                    }
+                }
+            }
+
+            async function disconnectSerial() {
+                try {
+                    if (serialReader) {
+                        await serialReader.cancel();
+                        serialReader = null;
+                    }
+                    if (serialWriter) {
+                        await serialWriter.close();
+                        serialWriter = null;
+                    }
+                    if (serialPort) {
+                        await serialPort.close();
+                        serialPort = null;
+                    }
+                } catch (error) {
+                    console.error('Erro ao desconectar serial:', error);
+                }
+
+                isSerialConnected = false;
+                updateSerialBadge('offline', 'Serial: off');
+                serialStatusText.textContent = 'Serial: desconectado';
+                btnSerialConnect.disabled = false;
+                btnSerialDisconnect.disabled = true;
+                showToast('🔌 Serial desconectado', 'info');
+            }
+
+            btnSerialConnect.addEventListener('click', connectSerial);
+            btnSerialDisconnect.addEventListener('click', disconnectSerial);
+
+            // ============================================================
+            //  INICIALIZAÇÃO
+            // ============================================================
             updateLedVisual(0);
-          } else {
-            // ignora outros valores
-          }
-        };
+            updateMqttBadge('connecting', 'MQTT: iniciando');
+            updateSerialBadge('offline', 'Serial: off');
+            setControlsEnabled(false);
+            serialStatusText.textContent = 'Serial: desconectado';
+            btnSerialDisconnect.disabled = true;
 
-        const connectOptions = {
-          useSSL: true,
-          onSuccess: function() {
-            console.log('Conectado ao broker');
-            setStatus('online', 'Sistema Online');
-            // subscribe no tópico atual
-            const topic = topicInput.value.trim();
-            if (topic) {
-              client.subscribe(topic, { onSuccess: function() {
-                currentTopic = topic;
-                console.log(`subscribed to ${topic}`);
-              }, onFailure: function(err) {
-                console.warn('subscribe error', err);
-              }});
-            }
-            // após conectar, não altera LED; fica no estado default (off)
-            // mas se já tivermos estado armazenado, usamos? Não, pois o broker envia estado.
-            // Para garantir, podemos pedir um refresh, mas como não há persistência, 
-            // o LED inicia como STANDBY.
-            updateLedVisual(0); // padrão
-          },
-          onFailure: function(err) {
-            console.error('Falha na conexão', err);
-            setStatus('offline', 'Falha na conexão');
-          },
-          timeout: 10,
-        };
-        client.connect(connectOptions);
-      }
+            // Inicia MQTT
+            initMqtt();
 
-      // Event Listeners
+            // ============================================================
+            //  TRATAMENTO DE FECHAMENTO
+            // ============================================================
+            window.addEventListener('beforeunload', function() {
+                if (isSerialConnected) {
+                    disconnectSerial();
+                }
+                if (mqttClient && isMqttConnected) {
+                    mqttClient.disconnect();
+                }
+            });
 
-      // Botões: apenas enviam mensagem, NUNCA alteram LED diretamente
-      btnOn.addEventListener('click', function() {
-        publishMessage('1');
-      });
+            console.log('🚀 Dashboard IoT iniciado!');
+            console.log('📡 Conecte o Arduino e clique em "Conectar Serial"');
+            console.log('💡 Use os botões LIGAR/DESLIGAR para controlar o LED');
 
-      btnOff.addEventListener('click', function() {
-        publishMessage('0');
-      });
+        })();
+    </script>
 
-      // Tópico: unsubscribe + subscribe ao perder foco ou ao mudar
-      let topicChanged = false;
-      topicInput.addEventListener('input', function() {
-        topicChanged = true;
-      });
-
-      topicInput.addEventListener('blur', function() {
-        if (topicChanged) {
-          const newTopic = topicInput.value.trim();
-          if (newTopic && newTopic !== currentTopic && isOnline && mqttClient) {
-            subscribeToTopic(newTopic);
-          }
-          topicChanged = false;
-        }
-      });
-
-      // Inicia MQTT
-      initMqtt();
-
-      // Define estado inicial do LED (standby)
-      updateLedVisual(0);
-      setStatus('connecting', 'Conectando');
-
-      // fallback: se não conectar, manter offline
-      setTimeout(() => {
-        if (mqttClient && !mqttClient.isConnected()) {
-          setStatus('offline', 'Timeout');
-        }
-      }, 12000);
-
-    })();
-  </script>
 </body>
 </html>
