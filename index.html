@@ -24,7 +24,6 @@
             padding: 20px;
         }
 
-        /* ===== CONTAINER PRINCIPAL ===== */
         .container {
             background: rgba(255, 255, 255, 0.06);
             backdrop-filter: blur(20px);
@@ -37,7 +36,6 @@
             box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
         }
 
-        /* ===== CABEÇALHO ===== */
         .header {
             display: flex;
             justify-content: space-between;
@@ -102,7 +100,6 @@
             }
         }
 
-        /* ===== LEDs ===== */
         .leds-container {
             display: flex;
             justify-content: center;
@@ -135,35 +132,31 @@
             transform: scale(1.05);
         }
 
-        /* ===== CORES DOS LEDs ===== */
-        /* VERMELHO - Pino 7 */
         .led-circle.vermelho {
             background: #2d1b1b;
             box-shadow: inset 0 -8px 15px rgba(0, 0, 0, 0.5);
         }
         .led-circle.vermelho.on {
             background: #ff1744;
-            box-shadow: 0 0 40px rgba(255, 23, 68, 0.6), 0 0 80px rgba(255, 23, 68, 0.2), inset 0 -8px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 0 40px rgba(255, 23, 68, 0.6), 0 0 80px rgba(255, 23, 68, 0.2);
         }
 
-        /* AMARELO - Pino 8 */
         .led-circle.amarelo {
             background: #2d2b1b;
             box-shadow: inset 0 -8px 15px rgba(0, 0, 0, 0.5);
         }
         .led-circle.amarelo.on {
             background: #ffd600;
-            box-shadow: 0 0 40px rgba(255, 214, 0, 0.6), 0 0 80px rgba(255, 214, 0, 0.2), inset 0 -8px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 0 40px rgba(255, 214, 0, 0.6), 0 0 80px rgba(255, 214, 0, 0.2);
         }
 
-        /* VERDE - Pino 9 */
         .led-circle.verde {
             background: #1b2d1b;
             box-shadow: inset 0 -8px 15px rgba(0, 0, 0, 0.5);
         }
         .led-circle.verde.on {
             background: #00e676;
-            box-shadow: 0 0 40px rgba(0, 230, 118, 0.6), 0 0 80px rgba(0, 230, 118, 0.2), inset 0 -8px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 0 40px rgba(0, 230, 118, 0.6), 0 0 80px rgba(0, 230, 118, 0.2);
         }
 
         .led-label {
@@ -188,14 +181,12 @@
             color: rgba(255, 255, 255, 0.25);
         }
 
-        /* ===== PINO INFO ===== */
         .pino-info {
             font-size: 10px;
             color: rgba(255, 255, 255, 0.15);
             letter-spacing: 0.5px;
         }
 
-        /* ===== BOTÕES ===== */
         .botoes-container {
             display: flex;
             gap: 12px;
@@ -232,7 +223,6 @@
             transform: none !important;
         }
 
-        /* Cores dos botões */
         .btn-vermelho {
             background: linear-gradient(135deg, #ff1744, #d50000);
             box-shadow: 0 4px 20px rgba(255, 23, 68, 0.25);
@@ -280,7 +270,6 @@
             transform: translateY(-3px);
         }
 
-        /* ===== CONTROLES INDIVIDUAIS ===== */
         .controles-individuais {
             display: flex;
             gap: 8px;
@@ -326,7 +315,6 @@
             background: rgba(255, 107, 107, 0.25);
         }
 
-        /* ===== LOG ===== */
         .log-container {
             margin-top: 25px;
             background: rgba(0, 0, 0, 0.3);
@@ -376,11 +364,9 @@
         .log::-webkit-scrollbar {
             width: 4px;
         }
-
         .log::-webkit-scrollbar-track {
             background: transparent;
         }
-
         .log::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.08);
             border-radius: 10px;
@@ -389,55 +375,74 @@
         .log .time {
             color: rgba(255, 255, 255, 0.1);
         }
-
         .log .msg-ok {
             color: #51cf66;
         }
-
         .log .msg-erro {
             color: #ff6b6b;
         }
-
         .log .msg-info {
             color: #74c0fc;
         }
 
-        /* ===== RESPONSIVO ===== */
+        /* Informações do sistema */
+        .system-info {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            flex-wrap: wrap;
+        }
+
+        .system-info span {
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 10px;
+            letter-spacing: 0.5px;
+            font-weight: 400;
+        }
+
+        .system-info .valor {
+            color: rgba(255, 255, 255, 0.4);
+            font-weight: 600;
+        }
+
         @media (max-width: 550px) {
             .container {
                 padding: 25px;
             }
-
             .header h1 {
                 font-size: 20px;
             }
-
             .leds-container {
                 gap: 20px;
             }
-
             .led-circle {
                 width: 65px;
                 height: 65px;
                 font-size: 28px;
             }
-
             .botoes-container {
                 flex-direction: column;
             }
-
             .controles-individuais {
                 flex-direction: column;
             }
-
             .btn {
                 padding: 12px 16px;
                 font-size: 13px;
             }
-
             .status-badge {
                 font-size: 11px;
                 padding: 6px 12px;
+            }
+            .system-info {
+                flex-direction: column;
+                align-items: center;
+                gap: 5px;
             }
         }
     </style>
@@ -456,21 +461,16 @@
 
         <!-- ===== LEDs ===== -->
         <div class="leds-container">
-            <!-- VERMELHO - Pino 7 -->
             <div class="led-item">
                 <div class="led-circle vermelho" id="ledVermelho">🔴</div>
                 <span class="led-label">Vermelho</span>
                 <span class="led-status-text off" id="statusVermelho">Pino 7 • Desligado</span>
             </div>
-
-            <!-- AMARELO - Pino 8 -->
             <div class="led-item">
                 <div class="led-circle amarelo" id="ledAmarelo">🟡</div>
                 <span class="led-label">Amarelo</span>
                 <span class="led-status-text off" id="statusAmarelo">Pino 8 • Desligado</span>
             </div>
-
-            <!-- VERDE - Pino 9 -->
             <div class="led-item">
                 <div class="led-circle verde" id="ledVerde">🟢</div>
                 <span class="led-label">Verde</span>
@@ -480,159 +480,15 @@
 
         <!-- ===== BOTÕES PRINCIPAIS ===== -->
         <div class="botoes-container">
-            <button class="btn btn-todos" id="btnTodosLigar" disabled>
-                ⚡ Ligar Todos
-            </button>
-            <button class="btn btn-desligar-todos" id="btnTodosDesligar" disabled>
-                ⏻ Desligar Todos
-            </button>
+            <button class="btn btn-todos" id="btnTodosLigar" disabled>⚡ Ligar Todos</button>
+            <button class="btn btn-desligar-todos" id="btnTodosDesligar" disabled>⏻ Desligar Todos</button>
         </div>
 
         <!-- ===== CONTROLES INDIVIDUAIS ===== -->
         <div class="controles-individuais">
-            <!-- Vermelho -->
             <button class="btn-pequeno ligar" id="btnVLigar" disabled>🔴 Ligar</button>
             <button class="btn-pequeno desligar" id="btnVDesligar" disabled>🔴 Desl.</button>
-
-            <!-- Amarelo -->
             <button class="btn-pequeno ligar" id="btnALigar" disabled>🟡 Ligar</button>
             <button class="btn-pequeno desligar" id="btnADesligar" disabled>🟡 Desl.</button>
-
-            <!-- Verde -->
             <button class="btn-pequeno ligar" id="btnGLigar" disabled>🟢 Ligar</button>
-            <button class="btn-pequeno desligar" id="btnGDesligar" disabled>🟢 Desl.</button>
-        </div>
-
-        <!-- ===== LOG ===== -->
-        <div class="log-container">
-            <div class="log-header">
-                <span>📋 Eventos</span>
-                <button id="btnLimparLog">Limpar</button>
-            </div>
-            <div class="log" id="log">📋 Aguardando eventos...</div>
-        </div>
-    </div>
-
-    <script>
-        // ============================================================
-        //  JAVASCRIPT - CLIENTE DO SITE
-        // ============================================================
-
-        // ===== DOM =====
-        const statusDot = document.getElementById('statusDot');
-        const statusText = document.getElementById('statusText');
-
-        const ledVermelho = document.getElementById('ledVermelho');
-        const ledAmarelo = document.getElementById('ledAmarelo');
-        const ledVerde = document.getElementById('ledVerde');
-
-        const statusVermelho = document.getElementById('statusVermelho');
-        const statusAmarelo = document.getElementById('statusAmarelo');
-        const statusVerde = document.getElementById('statusVerde');
-
-        const btnVLigar = document.getElementById('btnVLigar');
-        const btnVDesligar = document.getElementById('btnVDesligar');
-        const btnALigar = document.getElementById('btnALigar');
-        const btnADesligar = document.getElementById('btnADesligar');
-        const btnGLigar = document.getElementById('btnGLigar');
-        const btnGDesligar = document.getElementById('btnGDesligar');
-        const btnTodosLigar = document.getElementById('btnTodosLigar');
-        const btnTodosDesligar = document.getElementById('btnTodosDesligar');
-        const btnLimparLog = document.getElementById('btnLimparLog');
-
-        const log = document.getElementById('log');
-
-        // ===== SOCKET =====
-        const socket = io();
-
-        // ===== FUNÇÕES =====
-        function addLog(msg, tipo = 'info') {
-            const time = new Date().toLocaleTimeString();
-            const classes = {
-                'ok': 'msg-ok',
-                'erro': 'msg-erro',
-                'info': 'msg-info'
-            };
-            const cls = classes[tipo] || 'msg-info';
-            log.innerHTML += `<span class="time">[${time}]</span> <span class="${cls}">${msg}</span>\n`;
-            log.scrollTop = log.scrollHeight;
-        }
-
-        function setStatus(mode, msg) {
-            statusDot.className = 'dot';
-            if (mode === 'online') {
-                statusDot.classList.add('online');
-                statusText.textContent = msg || 'Online';
-            } else if (mode === 'offline') {
-                statusDot.classList.add('offline');
-                statusText.textContent = msg || 'Offline';
-            } else {
-                statusDot.classList.add('connecting');
-                statusText.textContent = msg || 'Conectando...';
-            }
-        }
-
-        function setButtonsEnabled(enabled) {
-            const btns = [
-                btnVLigar, btnVDesligar,
-                btnALigar, btnADesligar,
-                btnGLigar, btnGDesligar,
-                btnTodosLigar, btnTodosDesligar
-            ];
-            btns.forEach(b => b.disabled = !enabled);
-        }
-
-        function updateLED(cor, estado) {
-            const ledMap = {
-                'vermelho': { el: ledVermelho, status: statusVermelho, label: 'Vermelho', pino: 'Pino 7' },
-                'amarelo': { el: ledAmarelo, status: statusAmarelo, label: 'Amarelo', pino: 'Pino 8' },
-                'verde': { el: ledVerde, status: statusVerde, label: 'Verde', pino: 'Pino 9' }
-            };
-
-            const item = ledMap[cor];
-            if (!item) return;
-
-            if (estado === 1) {
-                item.el.classList.add('on');
-                item.status.className = 'led-status-text on';
-                item.status.textContent = `${item.pino} • ✅ Ligado`;
-            } else {
-                item.el.classList.remove('on');
-                item.status.className = 'led-status-text off';
-                item.status.textContent = `${item.pino} • ⭕ Desligado`;
-            }
-        }
-
-        function enviarComando(cmd, cor = null) {
-            if (socket.connected) {
-                socket.emit('comando', { cmd: cmd, cor: cor });
-            } else {
-                addLog('⚠️ Não conectado ao servidor!', 'erro');
-            }
-        }
-
-        // ===== EVENTOS SOCKET =====
-        socket.on('connect', function() {
-            setStatus('online', 'Conectado');
-            setButtonsEnabled(true);
-            addLog('✅ Conectado ao servidor!', 'ok');
-        });
-
-        socket.on('disconnect', function() {
-            setStatus('offline', 'Desconectado');
-            setButtonsEnabled(false);
-            addLog('❌ Desconectado do servidor!', 'erro');
-        });
-
-        socket.on('init', function(data) {
-            updateLED('vermelho', data.vermelho || 0);
-            updateLED('amarelo', data.amarelo || 0);
-            updateLED('verde', data.verde || 0);
-            addLog('📩 Estado inicial recebido', 'info');
-        });
-
-        socket.on('led_status', function(data) {
-            const cor = data.cor;
-            const estado = data.estado;
-
-            if (cor === 'todos')
+            <button class="btn-pequeno desligar" id="btnGDesligar" disabled>🟢 Desl.</
