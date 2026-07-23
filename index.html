@@ -1,605 +1,638 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-  <title>Central de Iluminação IoT</title>
-  <!-- Paho MQTT via CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
-  <style>
-    /* reset & base */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚦 Controle de LEDs</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js">
+    </script>
+    <style>
+        /* ===== RESET ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    body {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(145deg, #d4eaff 0%, #f0f9ff 100%);
-      padding: 1.5rem;
-      margin: 0;
-    }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            padding: 20px;
+        }
 
-    /* card principal - glassmorphism */
-    .glass-card {
-      max-width: 680px;
-      width: 100%;
-      background: rgba(255, 255, 255, 0.48);
-      backdrop-filter: blur(14px) saturate(180%);
-      -webkit-backdrop-filter: blur(14px) saturate(180%);
-      border-radius: 2.5rem;
-      border: 1px solid rgba(255, 255, 255, 0.6);
-      box-shadow: 0 20px 40px -12px rgba(0, 20, 40, 0.25), 0 8px 24px -6px rgba(0, 40, 80, 0.08);
-      padding: 2rem 2.2rem;
-      transition: all 0.25s ease;
-    }
+        /* ===== CONTAINER PRINCIPAL ===== */
+        .container {
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 30px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+        }
 
-    @media (max-width: 480px) {
-      .glass-card {
-        padding: 1.6rem 1.2rem;
-        border-radius: 2rem;
-      }
-    }
+        /* ===== CABEÇALHO ===== */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
 
-    /* cabeçalho */
-    .header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: baseline;
-      justify-content: space-between;
-      margin-bottom: 1.8rem;
-    }
+        .header h1 {
+            color: #fff;
+            font-size: 28px;
+            font-weight: 700;
+        }
 
-    .title-group {
-      display: flex;
-      flex-direction: column;
-    }
+        .header h1 span {
+            color: #ff6b6b;
+        }
 
-    .title-main {
-      font-size: 1.8rem;
-      font-weight: 600;
-      letter-spacing: -0.02em;
-      color: #0b2b44;
-      line-height: 1.2;
-    }
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.06);
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-size: 13px;
+            color: #aaa;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
 
-    .title-sub {
-      font-size: 0.9rem;
-      font-weight: 400;
-      color: #3d5a73;
-      opacity: 0.8;
-      margin-top: 0.1rem;
-      letter-spacing: 0.2px;
-    }
+        .status-badge .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
 
-    /* pill de status */
-    .status-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: rgba(255, 255, 255, 0.5);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
-      padding: 0.45rem 1.1rem 0.45rem 0.9rem;
-      border-radius: 60px;
-      border: 1px solid rgba(255, 255, 255, 0.8);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-      font-size: 0.85rem;
-      font-weight: 500;
-      color: #1e2f3f;
-      transition: all 0.2s;
-    }
+        .status-badge .dot.online {
+            background: #51cf66;
+            box-shadow: 0 0 15px rgba(81, 207, 102, 0.4);
+        }
 
-    .status-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: #fbbf24; /* amarelo padrão */
-      box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.2);
-      transition: background 0.3s, box-shadow 0.3s;
-      flex-shrink: 0;
-    }
+        .status-badge .dot.offline {
+            background: #ff6b6b;
+            box-shadow: 0 0 15px rgba(255, 107, 107, 0.4);
+        }
 
-    .status-dot.online {
-      background: #10b981;
-      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3), 0 0 12px #10b98166;
-    }
+        .status-badge .dot.connecting {
+            background: #ffd93d;
+            animation: pulse 1s infinite;
+        }
 
-    .status-dot.offline {
-      background: #ef4444;
-      box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
-    }
+        @keyframes pulse {
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(0.8);
+            }
+        }
 
-    .status-dot.sync {
-      background: #fbbf24;
-      animation: pulse-dot 1.2s ease-in-out infinite;
-    }
+        /* ===== LEDs ===== */
+        .leds-container {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin: 30px 0;
+        }
 
-    @keyframes pulse-dot {
-      0% { opacity: 0.6; transform: scale(0.95); box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.2); }
-      50% { opacity: 1; transform: scale(1.1); box-shadow: 0 0 0 6px rgba(251, 191, 36, 0.1); }
-      100% { opacity: 0.6; transform: scale(0.95); box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.2); }
-    }
+        .led-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
 
-    .status-text {
-      white-space: nowrap;
-    }
+        .led-circle {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 35px;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: pointer;
+            border: 3px solid rgba(255, 255, 255, 0.06);
+            position: relative;
+        }
 
-    /* tópico */
-    .topic-area {
-      margin: 1.2rem 0 1.8rem 0;
-    }
+        .led-circle:hover {
+            transform: scale(1.05);
+        }
 
-    .topic-label {
-      display: block;
-      font-size: 0.75rem;
-      font-weight: 600;
-      letter-spacing: 0.4px;
-      text-transform: uppercase;
-      color: #2c4b66;
-      opacity: 0.7;
-      margin-bottom: 0.4rem;
-    }
+        /* ===== CORES DOS LEDs ===== */
+        /* VERMELHO - Pino 7 */
+        .led-circle.vermelho {
+            background: #2d1b1b;
+            box-shadow: inset 0 -8px 15px rgba(0, 0, 0, 0.5);
+        }
+        .led-circle.vermelho.on {
+            background: #ff1744;
+            box-shadow: 0 0 40px rgba(255, 23, 68, 0.6), 0 0 80px rgba(255, 23, 68, 0.2), inset 0 -8px 15px rgba(0, 0, 0, 0.2);
+        }
 
-    .topic-input {
-      width: 100%;
-      padding: 0.8rem 1.2rem;
-      background: rgba(255, 255, 255, 0.5);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
-      border: 1px solid rgba(255, 255, 255, 0.7);
-      border-radius: 60px;
-      font-size: 0.95rem;
-      font-weight: 450;
-      color: #0b2b44;
-      outline: none;
-      transition: all 0.2s;
-      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.01);
-    }
+        /* AMARELO - Pino 8 */
+        .led-circle.amarelo {
+            background: #2d2b1b;
+            box-shadow: inset 0 -8px 15px rgba(0, 0, 0, 0.5);
+        }
+        .led-circle.amarelo.on {
+            background: #ffd600;
+            box-shadow: 0 0 40px rgba(255, 214, 0, 0.6), 0 0 80px rgba(255, 214, 0, 0.2), inset 0 -8px 15px rgba(0, 0, 0, 0.2);
+        }
 
-    .topic-input:focus {
-      border-color: #7aa9d9;
-      background: rgba(255, 255, 255, 0.7);
-      box-shadow: 0 0 0 4px rgba(58, 130, 200, 0.08);
-    }
+        /* VERDE - Pino 9 */
+        .led-circle.verde {
+            background: #1b2d1b;
+            box-shadow: inset 0 -8px 15px rgba(0, 0, 0, 0.5);
+        }
+        .led-circle.verde.on {
+            background: #00e676;
+            box-shadow: 0 0 40px rgba(0, 230, 118, 0.6), 0 0 80px rgba(0, 230, 118, 0.2), inset 0 -8px 15px rgba(0, 0, 0, 0.2);
+        }
 
-    /* LED preview */
-    .led-preview {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 0.8rem 0 1.2rem 0;
-    }
+        .led-label {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
 
-    .led-circle {
-      width: 140px;
-      height: 140px;
-      border-radius: 50%;
-      background: #cbdde9; /* cinza azulado inativo */
-      box-shadow: inset 0 6px 12px rgba(0,0,0,0.02), 0 4px 12px rgba(0,0,0,0.02);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2), box-shadow 0.5s ease, transform 0.2s;
-      color: #2e4a62;
-      font-size: 0.9rem;
-      font-weight: 450;
-      letter-spacing: 0.3px;
-      text-align: center;
-      padding: 0 0.8rem;
-      will-change: transform;
-    }
+        .led-status-text {
+            color: rgba(255, 255, 255, 0.25);
+            font-size: 11px;
+            font-weight: 400;
+        }
 
-    .led-circle.active {
-      background: #0088ff; /* azul neon */
-      box-shadow: 0 0 30px #0088ffaa, 0 0 60px #0088ff66, 0 0 100px #0088ff33, inset 0 -4px 12px rgba(255,255,255,0.2);
-      color: white;
-      text-shadow: 0 2px 12px rgba(0,0,0,0.1);
-      animation: glow-pulse 2.2s ease-in-out infinite;
-    }
+        .led-status-text.on {
+            color: #51cf66;
+        }
 
-    @keyframes glow-pulse {
-      0% { box-shadow: 0 0 30px #0088ffaa, 0 0 60px #0088ff55, 0 0 100px #0088ff22; }
-      50% { box-shadow: 0 0 40px #0088ffdd, 0 0 80px #0088ff88, 0 0 120px #0088ff44; }
-      100% { box-shadow: 0 0 30px #0088ffaa, 0 0 60px #0088ff55, 0 0 100px #0088ff22; }
-    }
+        .led-status-text.off {
+            color: rgba(255, 255, 255, 0.25);
+        }
 
-    .led-circle.inactive {
-      background: #cbdde9;
-      box-shadow: inset 0 4px 8px rgba(0,0,0,0.02), 0 4px 12px rgba(0,0,0,0.02);
-      color: #3a5a72;
-    }
+        /* ===== PINO INFO ===== */
+        .pino-info {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.15);
+            letter-spacing: 0.5px;
+        }
 
-    /* botoes */
-    .actions {
-      display: flex;
-      gap: 1rem;
-      margin-top: 1.8rem;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
+        /* ===== BOTÕES ===== */
+        .botoes-container {
+            display: flex;
+            gap: 12px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
 
-    .btn {
-      flex: 1 1 140px;
-      min-width: 120px;
-      padding: 0.9rem 0.8rem;
-      border: none;
-      border-radius: 60px;
-      font-size: 1.1rem;
-      font-weight: 500;
-      letter-spacing: 0.4px;
-      color: white;
-      background: #b0c9dd;
-      box-shadow: 0 6px 16px rgba(0, 20, 40, 0.04);
-      transition: all 0.2s ease;
-      cursor: default;
-      opacity: 0.5;
-      transform: scale(0.98);
-      backdrop-filter: blur(2px);
-      -webkit-backdrop-filter: blur(2px);
-      border: 1px solid rgba(255,255,255,0.2);
-    }
+        .btn {
+            flex: 1;
+            min-width: 80px;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 16px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
 
-    .btn.enabled {
-      cursor: pointer;
-      opacity: 1;
-      transform: scale(1);
-      box-shadow: 0 8px 24px rgba(0, 40, 80, 0.08);
-    }
+        .btn:active {
+            transform: scale(0.94);
+        }
 
-    .btn.enabled:active {
-      transform: scale(0.94);
-    }
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: none !important;
+        }
 
-    .btn-on {
-      background: #2d8f6f; /* verde esmeralda suave */
-      border-color: #6bbaa0;
-    }
+        /* Cores dos botões */
+        .btn-vermelho {
+            background: linear-gradient(135deg, #ff1744, #d50000);
+            box-shadow: 0 4px 20px rgba(255, 23, 68, 0.25);
+        }
+        .btn-vermelho:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(255, 23, 68, 0.4);
+        }
 
-    .btn-on.enabled:hover {
-      background: #1f7a5d;
-      box-shadow: 0 8px 24px #2d8f6f44;
-    }
+        .btn-amarelo {
+            background: linear-gradient(135deg, #ffd600, #f9a825);
+            box-shadow: 0 4px 20px rgba(255, 214, 0, 0.25);
+            color: #1a1a2e;
+        }
+        .btn-amarelo:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(255, 214, 0, 0.4);
+        }
 
-    .btn-off {
-      background: #bf7a7a; /* coral suave */
-      border-color: #dba8a8;
-    }
+        .btn-verde {
+            background: linear-gradient(135deg, #00e676, #00c853);
+            box-shadow: 0 4px 20px rgba(0, 230, 118, 0.25);
+        }
+        .btn-verde:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0, 230, 118, 0.4);
+        }
 
-    .btn-off.enabled:hover {
-      background: #ac6363;
-      box-shadow: 0 8px 24px #bf7a7a44;
-    }
+        .btn-todos {
+            background: linear-gradient(135deg, #7c4dff, #536dfe);
+            box-shadow: 0 4px 20px rgba(124, 77, 255, 0.25);
+            flex: 2;
+        }
+        .btn-todos:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(124, 77, 255, 0.4);
+        }
 
-    .btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-      transform: scale(0.96);
-    }
+        .btn-desligar-todos {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .btn-desligar-todos:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.12);
+            transform: translateY(-3px);
+        }
 
-    /* pequenos ajustes */
-    .flex-spacer {
-      flex: 1;
-    }
+        /* ===== CONTROLES INDIVIDUAIS ===== */
+        .controles-individuais {
+            display: flex;
+            gap: 8px;
+            margin: 10px 0 15px 0;
+            flex-wrap: wrap;
+        }
 
-    .text-muted {
-      color: #4b6d88;
-      font-weight: 400;
-    }
+        .btn-pequeno {
+            flex: 1;
+            min-width: 50px;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
 
-    /* responsividade */
-    @media (max-width: 500px) {
-      .title-main {
-        font-size: 1.5rem;
-      }
-      .status-pill {
-        font-size: 0.75rem;
-        padding: 0.3rem 0.9rem 0.3rem 0.7rem;
-      }
-      .led-circle {
-        width: 110px;
-        height: 110px;
-        font-size: 0.8rem;
-      }
-      .btn {
-        font-size: 1rem;
-        padding: 0.8rem 0.4rem;
-        min-width: 100px;
-      }
-    }
-  </style>
+        .btn-pequeno:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .btn-pequeno.ligar {
+            background: rgba(81, 207, 102, 0.15);
+            border: 1px solid rgba(81, 207, 102, 0.2);
+            color: #51cf66;
+        }
+        .btn-pequeno.ligar:hover:not(:disabled) {
+            background: rgba(81, 207, 102, 0.25);
+        }
+
+        .btn-pequeno.desligar {
+            background: rgba(255, 107, 107, 0.15);
+            border: 1px solid rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+        }
+        .btn-pequeno.desligar:hover:not(:disabled) {
+            background: rgba(255, 107, 107, 0.25);
+        }
+
+        /* ===== LOG ===== */
+        .log-container {
+            margin-top: 25px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 16px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .log-header span {
+            color: rgba(255, 255, 255, 0.25);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .log-header button {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.15);
+            cursor: pointer;
+            font-size: 12px;
+            transition: color 0.3s;
+        }
+
+        .log-header button:hover {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .log {
+            color: rgba(255, 255, 255, 0.5);
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 80px;
+            overflow-y: auto;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+
+        .log::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .log::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .log::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+        }
+
+        .log .time {
+            color: rgba(255, 255, 255, 0.1);
+        }
+
+        .log .msg-ok {
+            color: #51cf66;
+        }
+
+        .log .msg-erro {
+            color: #ff6b6b;
+        }
+
+        .log .msg-info {
+            color: #74c0fc;
+        }
+
+        /* ===== RESPONSIVO ===== */
+        @media (max-width: 550px) {
+            .container {
+                padding: 25px;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .leds-container {
+                gap: 20px;
+            }
+
+            .led-circle {
+                width: 65px;
+                height: 65px;
+                font-size: 28px;
+            }
+
+            .botoes-container {
+                flex-direction: column;
+            }
+
+            .controles-individuais {
+                flex-direction: column;
+            }
+
+            .btn {
+                padding: 12px 16px;
+                font-size: 13px;
+            }
+
+            .status-badge {
+                font-size: 11px;
+                padding: 6px 12px;
+            }
+        }
+    </style>
 </head>
 <body>
 
-<div class="glass-card">
-  
-  <!-- cabeçalho -->
-  <div class="header">
-    <div class="title-group">
-      <span class="title-main">💡 Central de Iluminação</span>
-      <span class="title-sub">Controle de Hardware · Porta 13</span>
+    <div class="container">
+        <!-- ===== CABEÇALHO ===== -->
+        <div class="header">
+            <h1>🚦 <span>LED</span> Control</h1>
+            <div class="status-badge">
+                <span class="dot connecting" id="statusDot"></span>
+                <span id="statusText">Conectando...</span>
+            </div>
+        </div>
+
+        <!-- ===== LEDs ===== -->
+        <div class="leds-container">
+            <!-- VERMELHO - Pino 7 -->
+            <div class="led-item">
+                <div class="led-circle vermelho" id="ledVermelho">🔴</div>
+                <span class="led-label">Vermelho</span>
+                <span class="led-status-text off" id="statusVermelho">Pino 7 • Desligado</span>
+            </div>
+
+            <!-- AMARELO - Pino 8 -->
+            <div class="led-item">
+                <div class="led-circle amarelo" id="ledAmarelo">🟡</div>
+                <span class="led-label">Amarelo</span>
+                <span class="led-status-text off" id="statusAmarelo">Pino 8 • Desligado</span>
+            </div>
+
+            <!-- VERDE - Pino 9 -->
+            <div class="led-item">
+                <div class="led-circle verde" id="ledVerde">🟢</div>
+                <span class="led-label">Verde</span>
+                <span class="led-status-text off" id="statusVerde">Pino 9 • Desligado</span>
+            </div>
+        </div>
+
+        <!-- ===== BOTÕES PRINCIPAIS ===== -->
+        <div class="botoes-container">
+            <button class="btn btn-todos" id="btnTodosLigar" disabled>
+                ⚡ Ligar Todos
+            </button>
+            <button class="btn btn-desligar-todos" id="btnTodosDesligar" disabled>
+                ⏻ Desligar Todos
+            </button>
+        </div>
+
+        <!-- ===== CONTROLES INDIVIDUAIS ===== -->
+        <div class="controles-individuais">
+            <!-- Vermelho -->
+            <button class="btn-pequeno ligar" id="btnVLigar" disabled>🔴 Ligar</button>
+            <button class="btn-pequeno desligar" id="btnVDesligar" disabled>🔴 Desl.</button>
+
+            <!-- Amarelo -->
+            <button class="btn-pequeno ligar" id="btnALigar" disabled>🟡 Ligar</button>
+            <button class="btn-pequeno desligar" id="btnADesligar" disabled>🟡 Desl.</button>
+
+            <!-- Verde -->
+            <button class="btn-pequeno ligar" id="btnGLigar" disabled>🟢 Ligar</button>
+            <button class="btn-pequeno desligar" id="btnGDesligar" disabled>🟢 Desl.</button>
+        </div>
+
+        <!-- ===== LOG ===== -->
+        <div class="log-container">
+            <div class="log-header">
+                <span>📋 Eventos</span>
+                <button id="btnLimparLog">Limpar</button>
+            </div>
+            <div class="log" id="log">📋 Aguardando eventos...</div>
+        </div>
     </div>
-    <div class="status-pill" id="statusPill">
-      <span class="status-dot sync" id="statusDot"></span>
-      <span class="status-text" id="statusText">Sincronizando...</span>
-    </div>
-  </div>
 
-  <!-- tópico -->
-  <div class="topic-area">
-    <label class="topic-label" for="topicInput">📡 Tópico MQTT</label>
-    <input class="topic-input" id="topicInput" type="text" value="gerry_sanchez_led_exclusivo/arduino" spellcheck="false">
-  </div>
+    <script>
+        // ============================================================
+        //  JAVASCRIPT - CLIENTE DO SITE
+        // ============================================================
 
-  <!-- LED preview -->
-  <div class="led-preview">
-    <div class="led-circle inactive" id="ledCircle">Dispositivo Inativo</div>
-  </div>
+        // ===== DOM =====
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
 
-  <!-- ações -->
-  <div class="actions">
-    <button class="btn btn-on" id="btnOn" disabled>🔛 LIGAR</button>
-    <button class="btn btn-off" id="btnOff" disabled>⏻ DESLIGAR</button>
-  </div>
-  <div style="margin-top: 1rem; text-align: center; font-size: 0.7rem; color: #6a8aa3; opacity: 0.5; letter-spacing: 0.3px;">
-    <span>atualização via MQTT · broker.hivemq.com</span>
-  </div>
-</div>
+        const ledVermelho = document.getElementById('ledVermelho');
+        const ledAmarelo = document.getElementById('ledAmarelo');
+        const ledVerde = document.getElementById('ledVerde');
 
-<script>
-  (function() {
-    // --- DOM refs ---
-    const statusDot = document.getElementById('statusDot');
-    const statusText = document.getElementById('statusText');
-    const ledCircle = document.getElementById('ledCircle');
-    const btnOn = document.getElementById('btnOn');
-    const btnOff = document.getElementById('btnOff');
-    const topicInput = document.getElementById('topicInput');
+        const statusVermelho = document.getElementById('statusVermelho');
+        const statusAmarelo = document.getElementById('statusAmarelo');
+        const statusVerde = document.getElementById('statusVerde');
 
-    // --- estado interno ---
-    let currentTopic = topicInput.value.trim();
-    let client = null;
-    let isConnected = false;
-    let ledState = 0; // 0 = off, 1 = on
+        const btnVLigar = document.getElementById('btnVLigar');
+        const btnVDesligar = document.getElementById('btnVDesligar');
+        const btnALigar = document.getElementById('btnALigar');
+        const btnADesligar = document.getElementById('btnADesligar');
+        const btnGLigar = document.getElementById('btnGLigar');
+        const btnGDesligar = document.getElementById('btnGDesligar');
+        const btnTodosLigar = document.getElementById('btnTodosLigar');
+        const btnTodosDesligar = document.getElementById('btnTodosDesligar');
+        const btnLimparLog = document.getElementById('btnLimparLog');
 
-    // --- helpers UI ---
-    function setStatus(mode, msg) {
-      // mode: 'sync', 'online', 'offline'
-      statusDot.className = 'status-dot';
-      if (mode === 'sync') {
-        statusDot.classList.add('sync');
-        statusText.textContent = msg || 'Sincronizando...';
-      } else if (mode === 'online') {
-        statusDot.classList.add('online');
-        statusText.textContent = msg || 'Sistema Online';
-      } else if (mode === 'offline') {
-        statusDot.classList.add('offline');
-        statusText.textContent = msg || 'Desconectado';
-      }
-    }
+        const log = document.getElementById('log');
 
-    function setButtonsEnabled(enabled) {
-      if (enabled) {
-        btnOn.disabled = false;
-        btnOff.disabled = false;
-        btnOn.classList.add('enabled');
-        btnOff.classList.add('enabled');
-      } else {
-        btnOn.disabled = true;
-        btnOff.disabled = true;
-        btnOn.classList.remove('enabled');
-        btnOff.classList.remove('enabled');
-      }
-    }
+        // ===== SOCKET =====
+        const socket = io();
 
-    function updateLedUI(state) {
-      if (state === 1) {
-        ledCircle.className = 'led-circle active';
-        ledCircle.textContent = 'Dispositivo Ativo';
-      } else {
-        ledCircle.className = 'led-circle inactive';
-        ledCircle.textContent = 'Dispositivo Inativo';
-      }
-    }
-
-    // --- MQTT lógica ---
-    function connectMqtt() {
-      if (client) {
-        try { client.disconnect(); } catch (_) {}
-        client = null;
-      }
-
-      const clientId = 'web_' + Math.random().toString(16).substring(2, 10) + '_' + Date.now().toString(36);
-      const broker = 'broker.hivemq.com';
-      const port = 8884;
-      
-      client = new Paho.MQTT.Client(broker, port, clientId);
-      client.useSSL = true;
-
-      const onConnect = () => {
-        isConnected = true;
-        setStatus('online', 'Sistema Online');
-        setButtonsEnabled(true);
-        // inscreve no tópico atual
-        const topic = currentTopic;
-        if (topic && topic.length > 0) {
-          client.subscribe(topic, { qos: 0 });
-          console.log('[MQTT] inscrito em:', topic);
+        // ===== FUNÇÕES =====
+        function addLog(msg, tipo = 'info') {
+            const time = new Date().toLocaleTimeString();
+            const classes = {
+                'ok': 'msg-ok',
+                'erro': 'msg-erro',
+                'info': 'msg-info'
+            };
+            const cls = classes[tipo] || 'msg-info';
+            log.innerHTML += `<span class="time">[${time}]</span> <span class="${cls}">${msg}</span>\n`;
+            log.scrollTop = log.scrollHeight;
         }
-        // publica um status inicial? não obrigatório
-      };
 
-      const onFailure = (err) => {
-        isConnected = false;
-        setStatus('offline', 'Falha na conexão');
-        setButtonsEnabled(false);
-        console.warn('[MQTT] erro conexão:', err);
-        // tenta reconectar após 5s
-        setTimeout(() => {
-          if (!isConnected) {
-            connectMqtt();
-          }
-        }, 5000);
-      };
-
-      const onMessageArrived = (message) => {
-        const payload = message.payloadString.trim();
-        const topic = message.destinationName;
-        console.log(`[MQTT] mensagem em ${topic}:`, payload);
-
-        // só atualiza se for o tópico atual
-        if (topic === currentTopic) {
-          if (payload === '1') {
-            ledState = 1;
-            updateLedUI(1);
-          } else if (payload === '0') {
-            ledState = 0;
-            updateLedUI(0);
-          } else {
-            // ignora outros valores
-          }
+        function setStatus(mode, msg) {
+            statusDot.className = 'dot';
+            if (mode === 'online') {
+                statusDot.classList.add('online');
+                statusText.textContent = msg || 'Online';
+            } else if (mode === 'offline') {
+                statusDot.classList.add('offline');
+                statusText.textContent = msg || 'Offline';
+            } else {
+                statusDot.classList.add('connecting');
+                statusText.textContent = msg || 'Conectando...';
+            }
         }
-      };
 
-      client.onConnectionLost = (response) => {
-        isConnected = false;
-        setStatus('offline', 'Conexão perdida');
-        setButtonsEnabled(false);
-        console.warn('[MQTT] conexão perdida', response);
-        // tenta reconectar
-        setTimeout(() => {
-          if (!isConnected) {
-            connectMqtt();
-          }
-        }, 4000);
-      };
-
-      client.onMessageArrived = onMessageArrived;
-
-      const options = {
-        timeout: 10,
-        onSuccess: onConnect,
-        onFailure: onFailure,
-        useSSL: true,
-      };
-
-      client.connect(options);
-    }
-
-    // --- desinscrever e assinar novo tópico ---
-    function switchTopic(newTopic) {
-      if (!client || !isConnected) return;
-      if (!newTopic || newTopic.length === 0) return;
-
-      // desinscreve do antigo se existir
-      const oldTopic = currentTopic;
-      if (oldTopic && oldTopic.length > 0 && oldTopic !== newTopic) {
-        try {
-          client.unsubscribe(oldTopic, { qos: 0 });
-          console.log('[MQTT] desinscrito de:', oldTopic);
-        } catch (e) {
-          console.warn('[MQTT] erro ao desinscrever', e);
+        function setButtonsEnabled(enabled) {
+            const btns = [
+                btnVLigar, btnVDesligar,
+                btnALigar, btnADesligar,
+                btnGLigar, btnGDesligar,
+                btnTodosLigar, btnTodosDesligar
+            ];
+            btns.forEach(b => b.disabled = !enabled);
         }
-      }
 
-      // inscreve no novo
-      try {
-        client.subscribe(newTopic, { qos: 0 });
-        console.log('[MQTT] inscrito em:', newTopic);
-        currentTopic = newTopic;
-        // Não muda estado do LED, apenas aguarda mensagem
-      } catch (e) {
-        console.warn('[MQTT] erro ao inscrever', e);
-      }
-    }
+        function updateLED(cor, estado) {
+            const ledMap = {
+                'vermelho': { el: ledVermelho, status: statusVermelho, label: 'Vermelho', pino: 'Pino 7' },
+                'amarelo': { el: ledAmarelo, status: statusAmarelo, label: 'Amarelo', pino: 'Pino 8' },
+                'verde': { el: ledVerde, status: statusVerde, label: 'Verde', pino: 'Pino 9' }
+            };
 
-    // --- publicar comando ---
-    function publishCommand(value) {
-      if (!client || !isConnected) {
-        console.warn('[MQTT] não conectado');
-        return;
-      }
-      const topic = currentTopic;
-      if (!topic || topic.length === 0) {
-        console.warn('[MQTT] tópico inválido');
-        return;
-      }
-      const msg = new Paho.MQTT.Message(String(value));
-      msg.destinationName = topic;
-      msg.qos = 0;
-      client.send(msg);
-      console.log(`[MQTT] publicado '${value}' em ${topic}`);
-    }
+            const item = ledMap[cor];
+            if (!item) return;
 
-    // --- eventos UI ---
-    function handleTopicChange() {
-      const newTopic = topicInput.value.trim();
-      if (newTopic === currentTopic) return;
-      if (newTopic.length === 0) return;
-      // se conectado, faz a troca
-      if (isConnected && client) {
-        switchTopic(newTopic);
-      } else {
-        // apenas atualiza a referência para quando conectar
-        currentTopic = newTopic;
-      }
-    }
+            if (estado === 1) {
+                item.el.classList.add('on');
+                item.status.className = 'led-status-text on';
+                item.status.textContent = `${item.pino} • ✅ Ligado`;
+            } else {
+                item.el.classList.remove('on');
+                item.status.className = 'led-status-text off';
+                item.status.textContent = `${item.pino} • ⭕ Desligado`;
+            }
+        }
 
-    // --- inicialização e eventos ---
-    function init() {
-      // seta estado inicial
-      setStatus('sync', 'Sincronizando...');
-      setButtonsEnabled(false);
-      updateLedUI(0);
-      ledState = 0;
+        function enviarComando(cmd, cor = null) {
+            if (socket.connected) {
+                socket.emit('comando', { cmd: cmd, cor: cor });
+            } else {
+                addLog('⚠️ Não conectado ao servidor!', 'erro');
+            }
+        }
 
-      // conecta MQTT
-      connectMqtt();
+        // ===== EVENTOS SOCKET =====
+        socket.on('connect', function() {
+            setStatus('online', 'Conectado');
+            setButtonsEnabled(true);
+            addLog('✅ Conectado ao servidor!', 'ok');
+        });
 
-      // eventos dos botões
-      btnOn.addEventListener('click', function(e) {
-        if (!isConnected) return;
-        publishCommand('1');
-        // NÃO altera o LED localmente
-      });
+        socket.on('disconnect', function() {
+            setStatus('offline', 'Desconectado');
+            setButtonsEnabled(false);
+            addLog('❌ Desconectado do servidor!', 'erro');
+        });
 
-      btnOff.addEventListener('click', function(e) {
-        if (!isConnected) return;
-        publishCommand('0');
-        // NÃO altera o LED localmente
-      });
+        socket.on('init', function(data) {
+            updateLED('vermelho', data.vermelho || 0);
+            updateLED('amarelo', data.amarelo || 0);
+            updateLED('verde', data.verde || 0);
+            addLog('📩 Estado inicial recebido', 'info');
+        });
 
-      // evento de mudança no tópico (com debounce)
-      let topicTimeout = null;
-      topicInput.addEventListener('input', function() {
-        clearTimeout(topicTimeout);
-        topicTimeout = setTimeout(() => {
-          handleTopicChange();
-        }, 400);
-      });
+        socket.on('led_status', function(data) {
+            const cor = data.cor;
+            const estado = data.estado;
 
-      // se perder o foco, aplica imediatamente
-      topicInput.addEventListener('blur', function() {
-        clearTimeout(topicTimeout);
-        handleTopicChange();
-      });
-
-      // reconexão manual caso precise (ex: botão oculto?)
-      // mas já temos reconexão automática
-    }
-
-    // inicia
-    init();
-
-    // expor para debug (opcional)
-    window.__iot = { client, connectMqtt, publishCommand, currentTopic };
-  })();
-</script>
-</body>
-</html>
+            if (cor === 'todos')
